@@ -7,4 +7,4 @@ Implémenter plusieurs variantes de compression par "Bit Packing" pour accélér
 
 ## Compilation
 ```bash
-javac -d bin src/com/monprojet/*.java
+javac -d bin src/*.java
