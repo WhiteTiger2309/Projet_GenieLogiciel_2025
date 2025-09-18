@@ -1,4 +1,4 @@
-# Projet_G-nieLogiciel_2025
+# Projet_GenieLogiciel_2025
 
 Projet de génie logiciel (Master 1 Informatique).
 
