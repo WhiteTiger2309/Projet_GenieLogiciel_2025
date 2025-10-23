@@ -1,20 +1,27 @@
 package com.compression;
 
 /**
- * Fabrique permettant de créer dynamiquement un objet de compression
- * selon le type choisi.
+ * Fabrique permettant de créer des objets Compression
+ * selon le type choisi via l'enum TypeCompression.
  */
 public class CompressionFactory {
-    public static Compression creer(String type) {
-        switch (type.toLowerCase()) {
-            case "chevauchement":
+
+    public static Compression create(TypeCompression type) {
+        switch (type) {
+            case AVEC_CHEVAUCHEMENT:
+                System.out.println("→ Type de compression sélectionné : AVEC_CHEVAUCHEMENT");
                 return new CompressionAvecChevauchement();
-            case "sanschevauchement":
+
+            case SANS_CHEVAUCHEMENT:
+                System.out.println("→ Type de compression sélectionné : SANS_CHEVAUCHEMENT");
                 return new CompressionSansChevauchement();
-            case "debordement":
+
+            case AVEC_DEBORDEMENT:
+                System.out.println("→ Type de compression sélectionné : AVEC_DEBORDEMENT");
                 return new CompressionAvecDebordement();
+
             default:
-                throw new IllegalArgumentException("Type inconnu : " + type);
+                throw new IllegalArgumentException("Type de compression inconnu : " + type);
         }
     }
 }

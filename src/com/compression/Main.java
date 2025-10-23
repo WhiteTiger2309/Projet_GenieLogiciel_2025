@@ -1,38 +1,53 @@
 package com.compression;
 
-import java.util.Random;
+import java.util.Arrays;
 
-/**
- * Point d'entrée du programme.
- * 
- * - Génère un tableau aléatoire
- * - Crée un compresseur via la fabrique
- * - Mesure les performances
- */
 public class Main {
+
     public static void main(String[] args) {
-        // Exemple : créer un tableau aléatoire
-        int n = 1000;
-        int[] tableau = new int[n];
-        Random rand = new Random();
-        for (int i = 0; i < n; i++) {
-            tableau[i] = rand.nextInt(1024); // valeurs entre 0 et 1023
-        }
 
-        // Choisir un type de compression
-        Compression c = CompressionFactory.creer("chevauchement");
+        /*int[] tableau = {5, 12, 31, 7, 15, 1023, 2000, 999999};
+        int[] tableau2 = {5, 12, 31, 7, 15, 1023};
 
-        // Compression
-        long tCompresser = Benchmark.mesurerCompression(c, tableau);
-        System.out.println("Temps compresser() : " + tCompresser + " ns");
+        // ==========================================
+        // Test 1 : COMPRESSION SANS CHEVAUCHEMENT
+        // ==========================================
+        Compression compresseur1 = CompressionFactory.create(TypeCompression.SANS_CHEVAUCHEMENT);
 
-        // Décompression
-        int[] compresse = c.compresser(tableau);
-        long tDecompresser = Benchmark.mesurerDecompression(c, compresse);
-        System.out.println("Temps decompresser() : " + tDecompresser + " ns");
+        System.out.println("=== Compression SANS chevauchement ===");
+        MesurePerformance.mesurer(compresseur1, tableau2);
+        System.out.println();
 
-        // Accès direct
-        long tGet = Benchmark.mesurerAcces(c, 10);
-        System.out.println("Temps get(10) : " + tGet + " ns");
+
+        // ==========================================
+        // Test 2 : COMPRESSION AVEC CHEVAUCHEMENT
+        // ==========================================
+        Compression compresseur2 = CompressionFactory.create(TypeCompression.AVEC_CHEVAUCHEMENT);
+
+        System.out.println("=== Compression AVEC chevauchement ===");
+        MesurePerformance.mesurer(compresseur2, tableau);
+        System.out.println();
+
+
+        // ==========================================
+        // Test 3 : COMPRESSION AVEC DÉBORDEMENT
+        // ==========================================
+        Compression compresseur3 = CompressionFactory.create(TypeCompression.AVEC_DEBORDEMENT);
+
+        System.out.println("=== Compression AVEC débordement ===");
+        MesurePerformance.mesurer(compresseur3, tableau);
+
+        // Affiche la zone de débordement si présente
+        if (compresseur3 instanceof CompressionAvecDebordement) {
+            CompressionAvecDebordement c = (CompressionAvecDebordement) compresseur3;
+            System.out.println("Zone de débordement : " + Arrays.toString(c.getZoneDebordement()));
+        }*/
+
+
+
+
+        // --- ⚙️ Appel du benchmark complet ---
+        System.out.println("\n\n=== LANCEMENT DU BENCHMARK COMPLET ===\n");
+        BenchmarkCompression.debut_benchmark(null);  // <--- appelle directement le benchmark
     }
 }

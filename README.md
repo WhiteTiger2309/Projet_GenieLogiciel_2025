@@ -1,10 +1,17 @@
-# Projet_GenieLogiciel_2025
+# Projet Compression d'entiers (Bit Packing)
 
-Projet de génie logiciel (Master 1 Informatique).
+## Description
+Ce projet implémente différentes méthodes de compression d'entiers basées sur le bit packing :
+- Compression sans chevauchement
+- Compression avec chevauchement
+- Compression avec débordement
 
-## Objectif
-Implémenter plusieurs variantes de compression par "Bit Packing" pour accélérer la transmission de tableaux d'entiers.
+Chaque méthode permet de :
+- compresser un tableau d'entiers
+- le décompresser
+- accéder directement au i-ème élément compressé
 
-## Compilation
+## Compilation & exécution
 ```bash
-javac -d bin src/*.java
+javac -d out src/com/compression/*.java
+java -cp out com.compression.Main
