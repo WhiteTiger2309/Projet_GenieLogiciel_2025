@@ -1,0 +1,10 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+Nous avons conçu, implémenté et évalué trois variantes de bit packing avec accès direct, y compris une gestion de débordement et un format auto-portant pour la transmission. Les mesures montrent des gains substantiels dès que $n$ est modérément grand et $k$ petit, et précisent un seuil de rentabilité réaliste. En synthèse :
+\begin{itemize}
+	\item \textbf{CompressionAvecChevauchement} et \textbf{CompressionAvecDebordement} sont efficaces dans les distributions favorables (petits $k$ ou majorité de petites valeurs) ;
+	\item \textbf{CompressionSansChevauchement} est surtout pertinente pour des petits entiers et des alignements favorables ;
+	\item Le protocole de benchmark est stable (warmup, répétitions) et met en évidence la distinction \emph{payload vs total} ;
+	\item L'architecture est modulaire et extensible via la factory et l'énumération de types.
+\end{itemize}

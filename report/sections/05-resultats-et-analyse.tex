@@ -1,0 +1,20 @@
+\section{Résultats et analyses}
+\label{sec:resultats}
+
+Nous présentons des résultats pour (i) petits jeux non rentables (header dominant), (ii) cas amortis (\(n=256\), \(k\approx 4\)), (iii) cas très rentables (\(n=1024\), \(k\approx 2\)).
+
+\paragraph{Lecture recommandée.} Toujours distinguer \textbf{payload-only} (ce qui reflète le bit packing) et \textbf{total transmis} (header inclus), seul pertinent pour la transmission.
+
+\paragraph{Observations clés.}
+\begin{itemize}
+  \item Le header devient négligeable pour $n$ grand ; $k$ petit favorise fortement le gain.
+  \item Sans chevauchement, le padding si $32\bmod k\neq 0$ dégrade \emph{légèrement} par rapport au flux continu.
+  \item Débordement n'aide que si beaucoup de valeurs tiennent dans $2^{k'}$ et si la zone reste modérée.
+  \item Le seuil $t$ baisse fortement quand le ratio compressé/original diminue.
+\end{itemize}
+\paragraph{Constats spécifiques au projet.}
+\begin{itemize}
+  \item \textbf{Chevauchement} et \textbf{Débordement} se sont avérés efficaces sur les jeux \emph{à petits k} ou avec forte proportion de valeurs \emph{petites} (ratio observé jusqu'à $\approx 0{,}625$ selon les cas).
+  \item \textbf{SansChevauchement} n'est généralement pas rentable en présence de grands entiers (padding et largeur $k$ élevée), ce que le benchmark explicite.
+  \item Les résultats sont \textbf{cohérents avec la théorie}: lorsque $n$ augmente ou lorsque $k$ diminue, la part du header dans le total devient marginale et le gain augmente.
+\end{itemize}

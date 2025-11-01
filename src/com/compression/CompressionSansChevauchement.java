@@ -6,6 +6,9 @@ package com.compression;
  * alignées dans les int de 32 bits (pas de chevauchement entre deux int).
  */
 public class CompressionSansChevauchement implements Compression {
+    private static final int MAGIC = 0x42505431; // 'BPT1'
+    private static final int VERSION = 1;
+
     private int[] donneesCompressees;
     private int largeurBits;  
     private int tailleOriginale;
@@ -25,7 +28,7 @@ public class CompressionSansChevauchement implements Compression {
         // Nombre de valeurs par int
         int valeursParInt = 32 / largeurBits;
         int tailleCompressee = (int) Math.ceil((double) tableau.length / valeursParInt);
-        donneesCompressees = new int[tailleCompressee];
+    donneesCompressees = new int[tailleCompressee];
 
         //System.out.println("=== DEBUG CompressionSansChevauchement ===");
         //System.out.println("Largeur (bits) = " + largeurBits);
@@ -64,23 +67,48 @@ public class CompressionSansChevauchement implements Compression {
                     String.format("%32s", Integer.toBinaryString(donneesCompressees[index])).replace(' ', '0'));
         }*/
 
-        return donneesCompressees;
+        // Construire la sortie avec en-tête auto-portant
+        int headerSize = 5; // MAGIC, VERSION, TYPE, tailleOriginale, largeurBits
+        int[] sortie = new int[headerSize + donneesCompressees.length];
+        sortie[0] = MAGIC;
+        sortie[1] = VERSION;
+        sortie[2] = TypeCompression.SANS_CHEVAUCHEMENT.ordinal();
+        sortie[3] = tailleOriginale;
+        sortie[4] = largeurBits;
+        System.arraycopy(donneesCompressees, 0, sortie, headerSize, donneesCompressees.length);
+
+        return sortie;
     }
+
 
     @Override
     public int[] decompresser(int[] compresse) {
-        int[] resultat = new int[tailleOriginale];
-        int mask = (1 << largeurBits) - 1;
+        // Lecture de l'en-tête
+        if (compresse == null || compresse.length < 5 || compresse[0] != MAGIC) {
+            throw new IllegalArgumentException("Format compressé invalide (MAGIC)");
+        }
+        int version = compresse[1];
+        if (version != VERSION) throw new IllegalArgumentException("Version non supportée");
+        int type = compresse[2];
+        if (type != TypeCompression.SANS_CHEVAUCHEMENT.ordinal()) {
+            // On pourrait tolérer, mais on signale une incohérence de type
+            throw new IllegalArgumentException("Type de compression inattendu pour ce décompresseur");
+        }
+        int origLen = compresse[3];
+        int k = compresse[4];
+
+        int[] resultat = new int[origLen];
+        int mask = (k >= 32) ? -1 : (1 << k) - 1;
 
         int index = 0;
         int posDansInt = 0;
-        int valeursParInt = 32 / largeurBits;
+        int valeursParInt = Math.max(1, 32 / Math.max(1, k));
+        int dataStart = 5;
 
-        for (int i = 0; i < tailleOriginale; i++) {
-            int shift = posDansInt * largeurBits;
-            resultat[i] = (compresse[index] >>> shift) & mask;
-
-            //System.out.printf("Lire int[%d], shift=%d → valeur=%d%n", index, shift, resultat[i]);
+        for (int i = 0; i < origLen; i++) {
+            int shift = posDansInt * k;
+            int val = (compresse[dataStart + index] >>> shift) & mask;
+            resultat[i] = val;
 
             posDansInt++;
             if (posDansInt == valeursParInt) {

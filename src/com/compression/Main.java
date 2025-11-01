@@ -1,6 +1,5 @@
 package com.compression;
 
-import java.util.Arrays;
 
 public class Main {
 

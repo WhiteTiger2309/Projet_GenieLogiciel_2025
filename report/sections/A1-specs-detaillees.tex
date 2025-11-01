@@ -1,0 +1,24 @@
+\section{Spécifications détaillées (formats et masquages)}
+\label{sec:specs}
+
+\subsection{En-têtes}
+\paragraph{Commun} \texttt{[MAGIC (0x42505431), VERSION, TYPE, tailleOriginale, ...]}
+\paragraph{Sans/avec chevauchement} + \texttt{k}
+\paragraph{Débordement} + \texttt{largeurChamp, k', bitsIndex, lenOverflow, zoneOverflow[lenOverflow]}
+
+\subsection{Masquage et décalage}
+\begin{itemize}
+  \item Masque $k$: $\text{mask}=(k\ge 32)?-1:(1\ll k)-1$ ;
+  \item Fusion bits entre deux mots si dépassement ;
+  \item Débordement: champ masqué à \texttt{largeurChamp}, puis \texttt{indicateur = champ >> innerWidth}, \texttt{contenu = champ \& ((1<<innerWidth)-1)}.
+\end{itemize}
+
+\subsection{Types et décompression sans état}
+Le champ \texttt{TYPE} correspond à l'énumération \texttt{TypeCompression} du code Java. Tous les décompresseurs lisent d'abord l'en-tête pour reconstruire le contexte (
+	exttt{k}, \texttt{largeurChamp}, \texttt{k'}, \texttt{bitsIndex}, etc.) puis opèrent \textbf{sans dépendre d'un état externe}.
+
+\subsection{Codage indicateur 0/1}
+\begin{itemize}
+  \item \texttt{0-x} : la valeur est \emph{contenue} sur $k'$ bits dans le champ ;
+  \item \texttt{1-x} : \emph{index} vers la zone de débordement (\texttt{zoneOverflow}).
+\end{itemize}

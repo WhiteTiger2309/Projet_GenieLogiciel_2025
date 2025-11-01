@@ -6,6 +6,9 @@ package com.compression;
  * Un entier peut être découpé entre deux int de 32 bits.
  */
 public class CompressionAvecChevauchement implements Compression {
+    private static final int MAGIC = 0x42505431; // 'BPT1'
+    private static final int VERSION = 1;
+
     private int[] donneesCompressees;
     private int largeurBits;
     private int tailleOriginale;
@@ -24,7 +27,7 @@ public class CompressionAvecChevauchement implements Compression {
 
         int totalBits = tableau.length * largeurBits;
         int tailleCompressee = (int) Math.ceil(totalBits / 32.0);
-        donneesCompressees = new int[tailleCompressee];
+    donneesCompressees = new int[tailleCompressee];
 
         //System.out.println("=== DEBUG CompressionAvecChevauchement ===");
         //System.out.println("Largeur (bits) = " + largeurBits);
@@ -53,32 +56,52 @@ public class CompressionAvecChevauchement implements Compression {
             bitPos += largeurBits;
         }
 
-        return donneesCompressees;
+        // Construire sortie avec en-tête auto-portant
+        int headerSize = 5; // MAGIC, VERSION, TYPE, tailleOriginale, largeurBits
+        int[] sortie = new int[headerSize + donneesCompressees.length];
+        sortie[0] = MAGIC;
+        sortie[1] = VERSION;
+        sortie[2] = TypeCompression.AVEC_CHEVAUCHEMENT.ordinal();
+        sortie[3] = tailleOriginale;
+        sortie[4] = largeurBits;
+        System.arraycopy(donneesCompressees, 0, sortie, headerSize, donneesCompressees.length);
+
+        return sortie;
     }
 
     @Override
     public int[] decompresser(int[] compresse) {
-        int[] resultat = new int[tailleOriginale];
-        int mask = (1 << largeurBits) - 1;
+        // Lecture de l'en-tête
+        if (compresse == null || compresse.length < 5 || compresse[0] != 0x42505431) {
+            throw new IllegalArgumentException("Format compressé invalide (MAGIC)");
+        }
+        int version = compresse[1];
+        if (version != VERSION) throw new IllegalArgumentException("Version non supportée");
+        int type = compresse[2];
+        if (type != TypeCompression.AVEC_CHEVAUCHEMENT.ordinal()) {
+            throw new IllegalArgumentException("Type de compression inattendu pour ce décompresseur");
+        }
+        int origLen = compresse[3];
+        int k = compresse[4];
 
+        int[] resultat = new int[origLen];
+        int mask = (k >= 32) ? -1 : (1 << k) - 1;
+
+        int dataStart = 5;
         int bitPos = 0;
-        for (int i = 0; i < tailleOriginale; i++) {
-            int indexInt = bitPos / 32;
-            int offset = bitPos % 32;
+        for (int i = 0; i < origLen; i++) {
+            int globalBitPos = bitPos;
+            int indexInt = globalBitPos / 32;
+            int offset = globalBitPos % 32;
 
-            int val = (compresse[indexInt] >>> offset);
+            int val = (compresse[dataStart + indexInt] >>> offset);
 
-            if (offset + largeurBits > 32) {
-                val |= (compresse[indexInt + 1] << (32 - offset));
-                //System.out.printf("Lire i=%d chevauchant int[%d] et int[%d]%n", i, indexInt, indexInt + 1);
-            } else {
-                //System.out.printf("Lire i=%d dans int[%d], offset=%d%n", i, indexInt, offset);
+            if (offset + k > 32) {
+                val |= (compresse[dataStart + indexInt + 1] << (32 - offset));
             }
 
             resultat[i] = val & mask;
-            //System.out.printf(" → valeur décompressée = %d%n", resultat[i]);
-
-            bitPos += largeurBits;
+            bitPos += k;
         }
 
         return resultat;

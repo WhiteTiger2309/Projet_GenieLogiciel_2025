@@ -1,0 +1,30 @@
+\section{Introduction}
+\label{sec:intro}
+
+\subsection*{Enoncé synthétique: ce qu'il fallait réaliser}
+
+
+
+\paragraph{Contexte et idée centrale.}
+Ce projet (Java) vise à \textbf{réduire la taille mémoire et le coût de transmission} de tableaux d'entiers 32 bits tout en \textbf{conservant un accès direct} au $i$-ème élément (sans décompression complète), en s'appuyant sur le \textit{bit packing} \cite{bitpacking}. 
+
+\paragraph{Travail demandé (3 variantes).}
+\begin{itemize}
+  \item \textbf{CompressionSansChevauchement} : cases de $k$ bits \emph{alignées} dans des mots de 32 bits ; pas de traversée de frontière de mot ;
+  \item \textbf{CompressionAvecChevauchement} : flux binaire continu ; une valeur peut chevaucher deux mots pour maximiser l'utilisation des bits ;
+  \item \textbf{CompressionAvecDebordement} : bit d'indicateur + contenu ; les valeurs \emph{petites} sont codées en place, les valeurs \emph{grandes} sont stockées dans une zone de débordement séparée.
+\end{itemize}
+
+\paragraph{Travail demandé (Factory).}
+L'architecture est modulaire (\texttt{CompressionFactory} + enum \texttt{TypeCompression})  Tous les formats sont \textbf{auto-portants} (en-têtes) afin de permettre une décompression \emph{sans état} et des tests de cohérence. Nous présentons les modèles, les choix de conception, le protocole expérimental, les résultats et leurs limites.
+\paragraph{Travail demandé (Benchmarks).}
+Une \texttt{BenchmarkCompression}/\texttt{MesurePerformance} pour mesurer \emph{temps de compression/décompression}, \emph{taille transmise} (payload et total) et \emph{latence seuil} de rentabilité.
+
+\paragraph{Exemple simple.} Pour le tableau $[5,7,8]$, le maximum vaut 8, donc $k=4$ bits suffisent (puisque $8=1000_2$). Au lieu de $3\times 32=96$ bits, on peut viser $3\times 4=12$ bits de \emph{payload}.
+
+
+\paragraph{Partie expérimentale.}
+Chronométrer \verb|compresser|, \verb|decompresser| et \verb|get(i)| ; comparer le temps gagné/perdu ; estimer à partir de quelle \textbf{latence réseau} la compression devient intéressante (seuil de rentabilité). Les résultats tiennent compte de la taille \emph{payload} et de la taille \emph{totale transmise} (en-tête inclus).
+
+\paragraph{Exigences d'architecture et de livrable.}
+Concevoir une architecture claire (fabrique de classes, énumération de types), un rapport et un dépôt. Dans ce projet, les en-têtes rendent les formats auto-descriptifs, et la décompression fonctionne \emph{sans état externe}, facilitant l'évaluation et l'utilisation en transmission.

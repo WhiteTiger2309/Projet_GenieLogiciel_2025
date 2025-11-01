@@ -1,0 +1,42 @@
+\section{Données de benchmark (extraits)}
+\label{sec:data}
+
+\paragraph{Jeux de données testés.}
+\begin{itemize}
+	\item \textbf{Aléatoire (n=8, min=0, max=1023)} : petits nombres, compression potentielle forte ;
+	\item \textbf{Aléatoire (n=8, min=0, max=1\,000\,000)} : grande amplitude, compression difficile ;
+	\item \textbf{Aléatoire (n=32, min=0, max=65\,535)} : taille moyenne et valeurs 16 bits ;
+	\item \textbf{Synthétique (n=256, valeurs $\in [0..15]$)} : $k\le 4$ bits, en-tête amorti, cas rentable attendu ;
+	\item \textbf{Synthétique (n=1024, valeurs $\in [0..3]$)} : $k=2$ bits, cas très rentable ;
+	\item \textbf{Fixe} : $[5, 12, 31, 7, 15, 1023, 2000, 999999]$ (largeurs hétérogènes) ;
+	\item \textbf{Fixe (sous-ensemble)} : $[5, 12, 31, 7, 15, 1023]$.
+\end{itemize}
+
+\begin{tabularx}{\textwidth}{lrrrr}
+\toprule
+Jeu & $n$ & $k$ & ints (total) & ints (payload)\\
+\midrule
+Aléatoire & 8 & 10 & 8 & 3\\
+$[0..15]$ & 256 & 4 & 37 & 32\\
+$[0..3]$ & 1024 & 2 & 69 & 64\\
+\bottomrule
+\end{tabularx}
+
+\vspace{6pt}
+\noindent Remarques: affichage en ns et $\mu$s ; ratio observé jusqu'à $\approx 0{,}625$ sur certains jeux favorables. Voir le programme pour les figures complètes et la méthodologie de mesure.
+
+\vspace{6pt}
+\noindent\textbf{Récapitulatif des paramètres des jeux (sans résultats numériques)}
+
+\begin{tabularx}{\textwidth}{lrrrrX}
+	oprule
+Jeu & $n$ & min & max & Type & Objectif \\
+\midrule
+Aléatoire & 8 & 0 & 1023 & test & compression potentielle forte \\
+Aléatoire & 8 & 0 & 1\,000\,000 & test & amplitude élevée, peu rentable \\
+Aléatoire & 32 & 0 & 65\,535 & test & valeurs 16 bits \\
+$[0..15]$ & 256 & 0 & 15 & synthétique & amortir l'en-tête ($k\le 4$) \\
+$[0..3]$ & 1024 & 0 & 3 & synthétique & cas très rentable ($k=2$) \\
+Fixe & 8 & \multicolumn{2}{c}{--} & exemple & valeurs hétérogènes \\
+\bottomrule
+\end{tabularx}

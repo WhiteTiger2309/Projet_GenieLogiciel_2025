@@ -1,0 +1,75 @@
+\section{Extraits de code}
+\label{sec:code}
+
+\subsection{Accès direct (chevauchement)}
+\begin{lstlisting}
+int bitPos = i * k;
+int indexInt = bitPos / 32;
+int offset = bitPos % 32;
+int val = (comp[indexInt] >>> offset);
+if (offset + k > 32) val |= (comp[indexInt+1] << (32 - offset));
+val &= (k >= 32) ? -1 : (1 << k) - 1;
+\end{lstlisting}
+
+\subsection{Champ débordement (extrait exact du projet)}
+\begin{lstlisting}
+// Extrait de CompressionAvecDebordement.decompresser(...)
+int champ = (compresse[dataStart + indexInt] >>> offset);
+if (offset + largeurChampLocal > 32 && dataStart + indexInt + 1 < compresse.length) {
+	champ |= (compresse[dataStart + indexInt + 1] << (32 - offset));
+}
+
+int innerWidth = Math.max(kPrimeLocal, bitsIndexLocal);
+int champMask = (largeurChampLocal >= 32) ? -1 : ((1 << largeurChampLocal) - 1);
+int innerMask = (innerWidth >= 32) ? -1 : ((1 << innerWidth) - 1);
+
+int champMasked = champ & champMask;
+int indicateur = champMasked >>> innerWidth;
+int contenu = champMasked & innerMask;
+\end{lstlisting}
+
+\subsection{Accès direct en débordement (get)}
+\begin{lstlisting}
+// Extrait de CompressionAvecDebordement.get(int i)
+int bitPos = i * largeurChamp;
+int indexInt = bitPos / 32;
+int offset = bitPos % 32;
+
+int champ = (donneesCompressees[indexInt] >>> offset);
+if (offset + largeurChamp > 32 && indexInt + 1 < donneesCompressees.length) {
+	champ |= (donneesCompressees[indexInt + 1] << (32 - offset));
+}
+
+int innerWidth = Math.max(kPrime, bitsIndex);
+int champMask = (largeurChamp >= 32) ? -1 : ((1 << largeurChamp) - 1);
+int innerMask = (innerWidth >= 32) ? -1 : ((1 << innerWidth) - 1);
+
+int champMasked = champ & champMask;
+int indicateur = champMasked >>> innerWidth;
+int contenu = champMasked & innerMask;
+\end{lstlisting}
+
+\subsection{Factory (sélection dynamique)}
+\begin{lstlisting}
+// Code client
+Compression c = CompressionFactory.create(TypeCompression.AVEC_CHEVAUCHEMENT);
+int[] compresse = c.compresser(original);
+int[] decompresse = c.decompresser(compresse);
+int v = c.get(42);
+\end{lstlisting}
+
+\begin{lstlisting}
+// Extrait de CompressionFactory
+public static Compression create(TypeCompression type) {
+	switch (type) {
+		case AVEC_CHEVAUCHEMENT:
+			return new CompressionAvecChevauchement();
+		case SANS_CHEVAUCHEMENT:
+			return new CompressionSansChevauchement();
+		case AVEC_DEBORDEMENT:
+			return new CompressionAvecDebordement();
+		default:
+			throw new IllegalArgumentException("Type de compression inconnu: " + type);
+	}
+}
+\end{lstlisting}

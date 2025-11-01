@@ -1,0 +1,7 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Treat common text files explicitly (optional examples)
+*.java text
+*.tex  text
+*.md   text

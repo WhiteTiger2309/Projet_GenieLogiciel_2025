@@ -1,0 +1,16 @@
+\section{Discussions et limites}
+\label{sec:discussion}
+
+\paragraph{Hypothèses.} Entiers non négatifs ; formats 32 bits ; accès direct prioritaire ; en-tête auto-portant.
+\paragraph{Limites.} Heuristique pour $k'$ ; index d'overflow basé sur première occurrence (peut être amélioré) ; pas d'optimalité garantie ; cas non rentables pour petits tableaux ou débordement massif ; dépendance à la distribution des valeurs.
+\paragraph{Validité des mesures.} JIT/GC/thermique/OS ; répéter et lisser. Mentionner les jeux de données et les seeds.
+\paragraph{Sécurité/robustesse.} Vérifier les bornes sur \verb|get(i)| ; tolérance aux fichiers corrompus (MAGIC/VERSION/TYPES), masques sûrs.
+
+\paragraph{Difficultés rencontrées et correctifs.}
+\begin{itemize}
+	\item \textbf{Débordement} : correction d'un défaut lors de la décompression (extraction \emph{après} masquage du champ à \texttt{largeurChamp}) qui pouvait conduire à des erreurs (par ex. exceptions ou incohérences d'intégrité) ;
+	\item \textbf{Structures} : remplacement de collections \texttt{ArrayList} par des \texttt{int[]} pour éviter surcoûts et simplifier l'interface binaire ;
+	\item \textbf{Affichage} : correction de l'affichage de tableaux (éviter la forme \verb|[I@xxxx|) pour une lecture claire du contenu ;
+	\item \textbf{API} : ajout de getters/setters cohérents dans les classes concernées ;
+	\item \textbf{Pédagogie} : messages explicatifs quand la compression est non pertinente (notamment pour \emph{SansChevauchement}).
+\end{itemize}

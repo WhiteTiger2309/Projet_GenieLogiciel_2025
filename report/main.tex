@@ -1,0 +1,61 @@
+% !TeX program = xelatex
+% !BIB program = biber
+\documentclass[11pt,a4paper]{article}
+
+% Language and encoding
+\usepackage[french]{babel}
+\usepackage{fontspec}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+
+% Math, units (charger amsmath avant cleveref)
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{siunitx}
+
+% Hyperref puis cleveref (cleveref après amsmath et hyperref)
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\sisetup{detect-all}
+
+% Figures, tables
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Code listings (no shell-escape needed); choose minted if preferred
+\usepackage{listings}
+\lstset{language=Java,basicstyle=\ttfamily\small,breaklines=true,frame=single,tabsize=2,showstringspaces=false}
+
+% Bibliography (biblatex + biber)
+\usepackage[backend=biber,style=numeric,sorting=nyt]{biblatex}
+\addbibresource{refs.bib}
+
+% Title
+\title{Compression d'entiers par Bit Packing avec accès direct et zone de débordement\\\large Rapport de projet de génie logiciel 2025}
+\author{Di Russo Marc\\M1 -- Informatique}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\input{sections/01-introduction}
+\input{sections/02-modele-et-theorie}
+\input{sections/03-conception-et-formats}
+\input{sections/04-mesures-et-protocole}
+\input{sections/05-resultats-et-analyse}
+\input{sections/06-discussion-et-limites}
+\input{sections/07-conclusion}
+
+\appendix
+\input{sections/A1-specs-detaillees}
+\input{sections/A2-extraits-code}
+\input{sections/A3-donnees-bench}
+
+\printbibliography
+\end{document}

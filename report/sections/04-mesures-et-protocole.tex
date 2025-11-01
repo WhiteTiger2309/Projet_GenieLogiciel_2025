@@ -1,0 +1,24 @@
+\section{Mesures et protocole}
+\label{sec:mesures}
+\paragraph{Protocole.} Pour chaque méthode: $W$ itérations de \emph{warmup} (JIT), puis $R$ itérations mesurées avec \verb|System.nanoTime()|. À chaque itération, vérifier \verb|compresser|\,$\Rightarrow$\,\verb|decompresser| $=$ original. Les résultats sont agrégés (moyenne, optionnellement écart-type) et affichés par \texttt{BenchmarkCompression}/\texttt{Main}.
+
+\paragraph{Métriques.} Temps moyens de compression/décompression (en ns et affichage en $\mu$s), tailles transmises (en entiers 32 bits et en bits), ratios \textbf{payload-only} et \textbf{total} (header inclus), et calcul du seuil $t$ de rentabilité (voir \cref{sec:modele}). Des messages explicatifs signalent les cas non rentables (notamment pour \emph{SansChevauchement}).
+
+\paragraph{Environnement.} JDK. Chronométrage Java standard.
+
+\paragraph{Visualisation.} Tableaux alignés sur les jeux décrits en \cref{sec:data}. Pour chaque catégorie, on présente:
+\begin{itemize}
+	\item \textbf{Vue taille} : \emph{payload-only} (ints), coût d'en-tête (\%), taille totale (ints) ;
+	\item \textbf{Vue temps} : temps moyens compresser/décompresser (ns) ;
+	\item \textbf{Seuil de rentabilité} : $t$ en ns/int selon la définition de \cref{sec:modele}.
+\end{itemize}
+Les jeux couverts correspondent exactement à l'annexe (\cref{sec:data}) :
+\begin{itemize}
+	\item Aléatoire (\(n=8\), min=0, max=1023) ;
+	\item Aléatoire (\(n=8\), min=0, max=1\,000\,000) ;
+	\item Aléatoire (\(n=32\), min=0, max=65\,535) ;
+	\item Synthétique (\(n=256\), valeurs $\in[0..15]$) ;
+	\item Synthétique (\(n=1024\), valeurs $\in[0..3]$) ;
+	\item Fixes : $[5,12,31,7,15,1023]$ et $[5,12,31,7,15,1023,2000,999999]$.
+\end{itemize}
+

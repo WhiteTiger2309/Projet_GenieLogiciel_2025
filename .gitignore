@@ -22,3 +22,43 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# --- Project specific ---
+# Java build output
+out/
+
+# VS Code and IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# LaTeX build outputs
+report/build/
+report/*.pdf
+report/*.synctex.gz
+report/*.aux
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.log
+report/*.run.xml
+report/*.toc
+report/*.out
+report/*.lof
+report/*.lot
+report/*.nav
+report/*.snm
+report/*.vrb
+report/main.bbl-SAVE-ERROR
+
+# Root-level build directory (if used)
+build/
+
+# Root latexmk config (use report/latexmkrc instead)
+latexmkrc

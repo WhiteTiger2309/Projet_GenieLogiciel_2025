@@ -1,0 +1,139 @@
+\section{Conception et formats de codage}
+\label{sec:conception}
+
+\subsection{Sans chevauchement}
+Chaque valeur occupe \emph{exactement} $k$ bits, alignée dans les 32 bits d'un mot ; aucun élément ne traverse deux mots. En cas de $32 \bmod k \neq 0$, un \emph{padding} intra-mot apparaît.
+
+\paragraph{Principe (bit packing sans chevauchement).}
+On suppose que chaque entier tient sur $k$ bits (par ex. valeurs $\in[0,1023] \Rightarrow k=10$). On regroupe plusieurs entiers \emph{entiers} (non coupés) dans des mots 32 bits. Un mot peut contenir $\lfloor 32/k\rfloor$ valeurs.
+
+\paragraph{Exemple.}
+Pour $[5,12,31]$ et $k=6$ (max $=63$) : $5=000101$, $12=001100$, $31=011111$. Ici $\lfloor 32/6\rfloor=5$, donc \textbf{un seul int} suffit pour stocker ces trois blocs de 6 bits.
+
+\paragraph{Compression.}
+\begin{enumerate}
+  \item Calculer $k$ (ou \texttt{largeurBits}) à partir du max : \verb|k = 32 - Integer.numberOfLeadingZeros(max)| ;
+  \item Remplir séquentiellement les mots de 32 bits en décalant (\verb|<<|) et combinant (\verb|||) des blocs de $k$ bits sans jamais les couper.
+\end{enumerate}
+
+\paragraph{Décompression.}
+\begin{enumerate}
+  \item Lire chaque mot 32 bits ;
+  \item Extraire les blocs de $k$ bits via un masque \verb|mask = (1 << k) - 1|, et des décalages (\verb|>>>|) successifs.
+\end{enumerate}
+
+\paragraph{Accès direct $\mathrm{get}(i)$.}
+Trouver le mot \verb|indexInt = i / valeursParMot|, puis \verb|offset = (i % valeursParMot) * k| ; extraire \verb|(mot >>> offset) & mask|.
+
+\subsection{Avec chevauchement}
+Flux binaire continu : l'élément $i$ commence au bit $i\,k$ et peut recouvrir 2 mots si $i\,k \bmod 32 + k > 32$.
+
+\paragraph{Principe (bit packing avec chevauchement).}
+Contrairement au cas précédent, on écrit dans un \emph{flux binaire continu}. Une valeur peut commencer dans \verb|int[indexInt]| et finir dans \verb|int[indexInt+1]| si elle dépasse la frontière des 32 bits.
+
+\paragraph{Compression.}
+On maintient un compteur de bits global \verb|bitPos|.
+\begin{enumerate}
+  \item Pour chaque valeur : \verb|indexInt = bitPos / 32|, \verb|offset = bitPos % 32| ;
+  \item Insérer sur $k$ bits par décalages (\verb|<<|) et OU (\verb|||) ;
+  \item Si \verb|offset + k > 32|, écrire la partie haute dans \verb|int[indexInt+1]| ;
+  \item Incrémenter \verb|bitPos += k|.
+\end{enumerate}
+
+\paragraph{Décompression.}
+Même logique : calculer \verb|indexInt|/\verb|offset| à partir de \verb|bitPos| ; lire dans un ou deux mots, reconstruire, puis appliquer le masque \verb|(1 << k) - 1|.
+
+\paragraph{Accès direct $\mathrm{get}(i)$.}
+Calculer \verb|bitPos = i * k|, puis \verb|indexInt = bitPos / 32|, \verb|offset = bitPos % 32| ; lire les $k$ bits requis (en combinant deux mots si nécessaire) et masquer.
+
+\subsection{Avec débordement}
+On code chaque élément par un bit indicateur et un contenu sur $\max(k',\text{bitsIndex})$ bits, garantissant une largeur constante, gage d'accès direct. La zone de débordement contient les valeurs hors seuil, dans l'ordre d'apparition.
+
+\paragraph{Principe (gestion de débordement).}
+Si quelques valeurs \emph{grandes} imposent un $k$ élevé, elles dégradent tout le tableau. L'idée est de choisir un $k' < k$ pour encoder en place la majorité des \emph{petites} valeurs et envoyer les \emph{grandes} dans une \textbf{zone de débordement}. Chaque élément de la zone principale est encodé sur une largeur constante
+\[
+ 	ext{largeurChamp} = 1 + \max(k',\,\text{bitsIndex}),\quad \text{où}\;\text{bitsIndex}=\lceil\log_2(\text{lenOverflow})\rceil.
+\]
+Le bit de poids fort est l'\textbf{indicateur} (0 = valeur directe sur $k'$ bits, 1 = index vers la zone overflow sur \texttt{bitsIndex} bits).
+
+\paragraph{Compression.}
+\begin{enumerate}
+  \item Choisir $k'$ (heuristique) à partir de la distribution ;
+  \item Construire \verb|zoneDebordement| avec toutes les valeurs $\ge 2^{k'}$ (dans leur ordre d'apparition) ;
+  \item Calculer \verb|bitsIndex = ceil(log2(lenOverflow))|, puis \verb|largeurChamp = 1 + max(k', bitsIndex)| ;
+  \item Pour chaque valeur :
+  \begin{enumerate}
+    \item \verb|indicateur = 1| et \verb|contenu = index| si valeur en overflow ; sinon \verb|indicateur = 0| et \verb|contenu = valeur| (tronquée sur $k'$ bits) ;
+    \item Former \verb|champ = (indicateur << innerWidth) | contenu|, avec \verb|innerWidth = max(k', bitsIndex)| ;
+    \item Écrire \verb|champ| sur \verb|largeurChamp| bits dans le flux (\verb|bitPos|, \verb|indexInt = bitPos/32|, \verb|offset = bitPos%32|), en combinant deux mots si \verb|offset + largeurChamp > 32|.
+  \end{enumerate}
+  \item Construire la trame finale : en-tête \texttt{[MAGIC, VERSION, TYPE, tailleOriginale, largeurChamp, k', bitsIndex, lenOverflow]}, puis \verb|zoneDebordement|, puis la \emph{payload} packée.
+\end{enumerate}
+
+\paragraph{Décompression.}
+Lire l'en-tête, reconstruire le contexte et la \verb|zoneDebordement| locale. Pour chaque élément (avec \verb|bitPos| croissant) :
+\begin{enumerate}
+  \item Extraire un \verb|champ| sur \verb|largeurChamp| bits (potentiellement à cheval sur deux mots) ;
+  \item Appliquer un masque sûr \verb|champMask = (largeurChamp>=32)?-1:((1<<largeurChamp)-1)| et \verb|innerMask = (innerWidth>=32)?-1:((1<<innerWidth)-1)| ;
+  \item \verb|champMasked = champ & champMask|, puis \verb|indicateur = champMasked >>> innerWidth|, \verb|contenu = champMasked & innerMask| ;
+  \item Si \verb|indicateur==1|, retourner \verb|zoneDebordement[contenu]| ; sinon \verb|contenu|.
+\end{enumerate}
+
+\paragraph{Accès direct $\mathrm{get}(i)$.}
+Même logique que la décompression, mais en utilisant l'état interne (\verb|donneesCompressees|, \verb|largeurChamp|, \verb|kPrime|, \verb|bitsIndex|, \verb|zoneDebordement|) pour calculer \verb|bitPos = i * largeurChamp|, lire \verb|champ| sur 1–2 mots, masquer et décider via l'\verb|indicateur|.
+
+\paragraph{Remarques pratiques.}
+Utiliser des masques \emph{sûrs} pour éviter les comportements indéfinis quand la largeur vaut 32 (par ex. conditionner \verb|(1<<w)-1|). Vérifier les bornes de \verb|contenu| avant d'indexer la zone de débordement. Cette variante est profitable lorsque la majorité des valeurs tiennent dans $2^{k'}$ et que la taille de la zone reste modérée.
+
+\subsection{En-tête auto-portant}
+Pour permettre une décompression \emph{sans état}: \texttt{[MAGIC, VERSION, TYPE, tailleOriginale, ...]}. Pour les variantes \emph{avec/sans chevauchement}: on ajoute $k$. Pour \emph{débordement}: \texttt{largeurChamp, k', bitsIndex, lenOverflow}, puis la zone overflow, puis la payload packée.
+
+\subsection{Accès direct $\mathrm{get}(i)$}
+\begin{itemize}
+  \item \textbf{Chevauchement}: position bit $b=i\,k$, mot $j=\lfloor b/32\rfloor$, décalage $o=b\bmod 32$ ; extraire sur $k$ bits (en combinant éventuellement deux mots).
+  \item \textbf{Sans chevauchement}: valeursParMot $=\lfloor 32/k\rfloor$, mot $j=\lfloor i/\text{valeursParMot}\rfloor$, décalage $o=(i\bmod \text{valeursParMot})\,k$.
+  \item \textbf{Débordement}: utiliser $\text{largeurChamp}$ et séparer indicateur / contenu après masquage.
+\end{itemize}
+
+\subsection{Choix et justification de la factory}
+Nous retenons une \textbf{Simple Factory} (méthode statique) \texttt{CompressionFactory.create(TypeCompression)} qui instancie l'implémentation adéquate selon un paramètre (l'énum \texttt{TypeCompression}). Ce choix est adapté car nous n'avons qu'une \emph{famille} d'objets (des compresseurs) et un point d'entrée unique de création suffit.
+
+\paragraph{Comparatif point par point.}
+\begin{itemize}
+  \item \textbf{Simple Factory (méthode statique)}
+    \begin{itemize}
+      \item \emph{Description} : une classe avec une méthode statique qui choisit l'instance à retourner selon un paramètre.
+      \item \emph{Adaptation} : \textbf{idéal} ici: on passe \texttt{TypeCompression} (\textit{AVEC\_CHEVAUCHEMENT}, \textit{SANS\_CHEVAUCHEMENT}, \textit{AVEC\_DEBORDEMENT}) et on obtient la bonne implémentation.
+      \item \emph{Intérêt} : \textbf{simple}, efficace, centralise la construction; extension aisée via ajout d'un \texttt{enum} et d'un cas.
+    \end{itemize}
+  \item \textbf{Factory Method (hiérarchie d'usines)}
+    \begin{itemize}
+      \item \emph{Description} : classe abstraite + sous-classes d'usines, une par type de produit.
+      \item \emph{Pourquoi pas} : \textit{trop lourd} ici, impliquerait autant d'usines que de compresseurs.
+    \end{itemize}
+  \item \textbf{Abstract Factory}
+    \begin{itemize}
+      \item \emph{Description} : crée des \emph{familles} d'objets corrélés (ex.: compresseur + visualiseur + mesure).
+      \item \emph{Pourquoi pas} : \textit{surdimensionnée} : une seule famille d'objets dans ce projet.
+    \end{itemize}
+  \item \textbf{Builder}
+    \begin{itemize}
+      \item \emph{Description} : construction pas-à-pas pour objets riches en paramètres.
+      \item \emph{Pourquoi pas} : peu de paramètres configurables dans nos compresseurs; \textit{non nécessaire}.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Conclusion.} La \emph{Simple Factory} offre le meilleur compromis \emph{simplicité/cohérence}. Elle encapsule la logique d'instanciation et maintient le code client propre. Le compromis principal est un \texttt{switch} centralisé (ou mapping) à maintenir lors de l'ajout d'un nouveau type, acceptable au regard du périmètre, et conforme aux objectifs de modularité du projet.
+
+\subsection{Organisation du code}
+Le projet utilise une interface \texttt{Compression} avec les méthodes communes \verb|compresser(int[])|, \verb|decompresser(int[])| et \verb|get(int)|. Les trois implémentations concrètes sont :
+\begin{itemize}
+  \item \texttt{CompressionSansChevauchement}
+  \item \texttt{CompressionAvecChevauchement}
+  \item \texttt{CompressionAvecDebordement}
+\end{itemize}
+La sélection dynamique s'effectue via \texttt{CompressionFactory} et l'énumération \texttt{TypeCompression}. La classe \texttt{MesurePerformance} fournit utilitaires et métriques, et \texttt{Main} exécute une démonstration/benchmark.
+
+\paragraph{Codage 0-x / 1-x.} Dans la variante débordement, l'indicateur \texttt{0} signifie ``contenu = valeur tronquée sur $k'$ bits'', l'indicateur \texttt{1} signifie ``contenu = index vers la zone overflow''. Des masques sûrs sont employés pour éviter tout dépassement de 32 bits.
+
+

@@ -1,0 +1,35 @@
+\section{Modèle et rappels théoriques}
+\label{sec:modele}
+
+Soit un tableau $X = (x_0,\dots,x_{n-1})$ d'entiers non négatifs. On note :
+\[
+ k = \max\bigl(1, \lceil \log_2(\max X + 1) \rceil\bigr).
+\]
+La \textbf{payload} théorique vaut $\text{totalBits} = n\,k$ et requiert $\lceil \text{totalBits}/32 \rceil$ entiers de 32 bits.
+
+Dans l'option \textit{débordement}, on choisit un $k' < k$ (heuristique/optimisation) et on réserve une zone \textit{overflow} pour les valeurs $\ge 2^{k'}$. Chaque élément est encodé par un champ de largeur constante :
+\[
+ \text{largeurChamp} = 1 + \max\bigl(k',\, \text{bitsIndex}\bigr),\quad \text{bitsIndex}=\lceil\log_2(\text{lenOverflow})\rceil.
+\]
+La payload binaire devient alors :
+\[
+ \text{totalBits} = n\,\text{largeurChamp} + 32\,\text{lenOverflow}.
+\]
+Le \textbf{seuil de rentabilité} en latence (formulation simple, au niveau des entiers 32 bits) :
+\[
+ t_{\text{break-even}} \approx \frac{T_{\text{comp}}}{N_{\text{orig}} - N_{\text{comp}}},
+\]
+avec $N_{\text{orig}}=n$ et $N_{\text{comp}}$ la taille transmise en entiers 32 bits (header inclus). Une version plus fine au niveau \emph{bits} est discutée plus loin.
+
+\paragraph{Bit packing et regroupement sur 32 bits \cite{bitpacking}.}
+\begin{itemize}
+	\item \textbf{Sans chevauchement} : on remplit des mots de 32 bits par paquets de $k$ bits, ce qui peut introduire un \emph{padding} si $32\bmod k\neq 0$ ;
+	\item \textbf{Avec chevauchement} : on considère un flux planaire de $n\,k$ bits, découpé ensuite en mots 32 bits ;
+	\item \textbf{Débordement} : chaque élément porte un \emph{bit indicateur} (0/1) et un \emph{contenu} (valeur tronquée ou index vers la zone overflow).
+\end{itemize}
+
+\paragraph{Formule opérationnelle fournie par le projet.} Pour exprimer un \emph{seuil de rentabilité temporel} simple à partir des mesures agrégées, on retient par ailleurs :
+\[
+ t_{\text{rentable}} = \frac{T_{\text{compression}} - T_{\text{decompression}}}{\text{gain\_taille}},
+\]
+où $\text{gain\_taille}$ représente la \emph{différence de taille transmise} (par exemple en entiers 32 bits ou en octets) entre l'original et le compressé. Cette écriture est cohérente avec la logique expérimentale rapportée (voir \cref{sec:mesures,sec:resultats}).

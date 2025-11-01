@@ -12,6 +12,8 @@ import java.util.List;
  *    k' bits pour la valeur ou l'indice dans la zone de débordement
  */
 public class CompressionAvecDebordement implements Compression {
+    private static final int MAGIC = 0x42505431; // 'BPT1'
+    private static final int VERSION = 1;
 
     private int[] donneesCompressees;
     private int[] zoneDebordement;
@@ -56,10 +58,10 @@ public class CompressionAvecDebordement implements Compression {
         // === Pour le codage binaire affichable ===
         StringBuilder codage = new StringBuilder();
 
-        // Étape 3 : écrire dans un flux de bits
-        int totalBits = tableau.length * largeurChamp;
-        int nbInts = (int) Math.ceil(totalBits / 32.0);
-        donneesCompressees = new int[nbInts];
+    // Étape 3 : écrire dans un flux de bits (partie "données" uniquement)
+    int totalBits = tableau.length * largeurChamp;
+    int nbInts = (int) Math.ceil(totalBits / 32.0);
+    donneesCompressees = new int[nbInts];
 
         int bitPos = 0;
         for (int val : tableau) {
@@ -91,32 +93,81 @@ public class CompressionAvecDebordement implements Compression {
         }
 
         codageBinaire = codage.toString().trim();
-        return donneesCompressees;
+
+        // Construire sortie avec en-tête et zone de débordement
+        int headerSize = 8; // MAGIC, VERSION, TYPE, tailleOriginale, largeurChamp, kPrime, bitsIndex, lenOverflow
+        int lenOverflow = zoneDebordement.length;
+        int[] sortie = new int[headerSize + lenOverflow + donneesCompressees.length];
+        sortie[0] = MAGIC;
+        sortie[1] = VERSION;
+        sortie[2] = TypeCompression.AVEC_DEBORDEMENT.ordinal();
+        sortie[3] = tailleOriginale;
+        sortie[4] = largeurChamp;
+        sortie[5] = kPrime;
+        sortie[6] = bitsIndex;
+        sortie[7] = lenOverflow;
+        // zone de débordement
+        System.arraycopy(zoneDebordement, 0, sortie, headerSize, lenOverflow);
+        // données compressées
+        System.arraycopy(donneesCompressees, 0, sortie, headerSize + lenOverflow, donneesCompressees.length);
+
+        return sortie;
     }
 
     @Override
     public int[] decompresser(int[] compresse) {
-        int[] resultat = new int[tailleOriginale];
+        // Lecture de l'en-tête
+        if (compresse == null || compresse.length < 8 || compresse[0] != MAGIC) {
+            throw new IllegalArgumentException("Format compressé invalide (MAGIC)");
+        }
+        int version = compresse[1];
+        if (version != VERSION) throw new IllegalArgumentException("Version non supportée");
+        int type = compresse[2];
+        if (type != TypeCompression.AVEC_DEBORDEMENT.ordinal()) {
+            throw new IllegalArgumentException("Type de compression inattendu pour ce décompresseur");
+        }
+        int origLen = compresse[3];
+        int largeurChampLocal = compresse[4];
+        int kPrimeLocal = compresse[5];
+        int bitsIndexLocal = compresse[6];
+        int lenOverflow = compresse[7];
+
+        // Lire la zone de débordement locale
+        int headerSize = 8;
+        int overflowStart = headerSize;
+        int dataStart = headerSize + lenOverflow;
+
+        int[] zoneDebordementLocal = new int[lenOverflow];
+        if (lenOverflow > 0) {
+            System.arraycopy(compresse, overflowStart, zoneDebordementLocal, 0, lenOverflow);
+        }
+
+        int[] resultat = new int[origLen];
         int bitPos = 0;
 
-        for (int i = 0; i < tailleOriginale; i++) {
+        for (int i = 0; i < origLen; i++) {
             int indexInt = bitPos / 32;
             int offset = bitPos % 32;
 
-            int champ = (compresse[indexInt] >>> offset);
-            if (offset + largeurChamp > 32 && indexInt + 1 < compresse.length) {
-                champ |= (compresse[indexInt + 1] << (32 - offset));
+            int champ = (compresse[dataStart + indexInt] >>> offset);
+            if (offset + largeurChampLocal > 32 && dataStart + indexInt + 1 < compresse.length) {
+                champ |= (compresse[dataStart + indexInt + 1] << (32 - offset));
             }
 
-            int indicateur = champ >>> Math.max(kPrime, bitsIndex);
-            int contenu = champ & ((1 << Math.max(kPrime, bitsIndex)) - 1);
+            int innerWidth = Math.max(kPrimeLocal, bitsIndexLocal);
+            int champMask = (largeurChampLocal >= 32) ? -1 : ((1 << largeurChampLocal) - 1);
+            int innerMask = (innerWidth >= 32) ? -1 : ((1 << innerWidth) - 1);
 
-            if (indicateur == 1 && contenu < zoneDebordement.length)
-                resultat[i] = zoneDebordement[contenu];
+            int champMasked = champ & champMask;
+            int indicateur = champMasked >>> innerWidth;
+            int contenu = champMasked & innerMask;
+
+            if (indicateur == 1 && contenu < zoneDebordementLocal.length)
+                resultat[i] = zoneDebordementLocal[contenu];
             else
                 resultat[i] = contenu;
 
-            bitPos += largeurChamp;
+            bitPos += largeurChampLocal;
         }
 
         return resultat;
@@ -133,8 +184,13 @@ public class CompressionAvecDebordement implements Compression {
             champ |= (donneesCompressees[indexInt + 1] << (32 - offset));
         }
 
-        int indicateur = champ >>> Math.max(kPrime, bitsIndex);
-        int contenu = champ & ((1 << Math.max(kPrime, bitsIndex)) - 1);
+        int innerWidth = Math.max(kPrime, bitsIndex);
+        int champMask = (largeurChamp >= 32) ? -1 : ((1 << largeurChamp) - 1);
+        int innerMask = (innerWidth >= 32) ? -1 : ((1 << innerWidth) - 1);
+
+        int champMasked = champ & champMask;
+        int indicateur = champMasked >>> innerWidth;
+        int contenu = champMasked & innerMask;
 
         if (indicateur == 1 && contenu < zoneDebordement.length)
             return zoneDebordement[contenu];
