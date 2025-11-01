@@ -1,4 +1,4 @@
-# Projet Compression d'entiers (Bit Packing)
+# Projet Compression d'entiers (Bit Packing) Marc Di Russo
 
 ## Description
 Ce projet implémente différentes méthodes de compression d'entiers basées sur le bit packing :
